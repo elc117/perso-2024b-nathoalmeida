@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Web.Scotty
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
-import Data.Text
-import qualified Data.Text.Lazy as LT (Text, unpack, pack, fromStrict)
+import Data.Text.Lazy as LT (Text, unpack, pack, fromStrict)
 import Text.Printf (printf)
 
 -- Lista com vencedores do Turing Award
@@ -24,40 +23,40 @@ turingWinners = [("Alan Perlis", 1966, "M"), ("Maurice Vincent Wilkes", 1967, "M
     ("Robert Metcalfe", 2022, "M"),("Avi Wigderson", 2023, "M")]
 
 answerToJSONFormat :: String -> String
-answerToJSONFormat str = printf "{\"atenção\": \"%s\"}" str
+answerToJSONFormat str = printf "{\"%s\"}" str
 
 yearCheck :: Int -> Bool
 yearCheck year = year >= 1966 && year <= 2023
                       
 selectGenderByYear :: [(String, Int, String)] -> Int -> String
-selectGenderByYear list year = [z | (x, y,z) <- list, y == year]
+selectGenderByYear list year = head [ z | (x, y, z) <- list, y == year]
 
-selectNamebyYear :: [(String, Int, String)] -> Int -> String
-selectNamebyYear list year = [ x | (x, y, z) <- list, y == year]
+selectNameByYear :: [(String, Int, String)] -> Int -> String
+selectNameByYear list year = head [ x | (x, y, z) <- list, y == year]
 
 femaleCheck :: String -> Bool
 femaleCheck gender = head gender == 'F'
 
 isFemale :: [(String, Int, String)] -> Int -> Bool
-isFemale list year = map femaleCheck (selectGenderByYear list year)
+isFemale list year = femaleCheck $ selectGenderByYear list year
 
 rightResponse :: [(String, Int, String)] -> Int -> String
-rightResponse list year = first ++ name ++ winner ++ year
+rightResponse list givenYear = first ++ name ++ winner ++ year
     where first = "Você está certo! "
-          name = selectNameByYear list year
+          name = selectNameByYear list givenYear
           winner = " venceu o Prêmio Turing em "
-          year = show year
+          year = show givenYear
 
 wrongResponse :: [(String, Int, String)] -> Int -> String
-wrongResponse list year = first ++ name ++ winner ++ year
-    where first = "Você errou! "
-          name = selectNameByYear list year
-          winner = "foi quem venceu o Prêmio Turing em "
-          year = show year
+wrongResponse list givenYear = first ++ name ++ winner ++ year
+            where   first = "Você errou! "
+                    name = selectNameByYear list givenYear
+                    winner = "foi quem venceu o Prêmio Turing em "
+                    year = show givenYear
 
-getResponseMessage list year = if not $ yearCheck givenYear then LT.pack (answerToJSONFormat "Insira um ano entre 1966 e 2023")
-    else if isFemale turingWinners givenYear then LT.pack (answerToJSONFormat (rightResponse turingWinners givenYear))
-    else LT.pack (answerToJSONFormat (wrongResponse turingWinners givenYear))
+getResponseMessage list givenYear = if not $ yearCheck givenYear then pack (answerToJSONFormat "Insira um ano entre 1966 e 2023")
+    else if isFemale turingWinners givenYear then pack (answerToJSONFormat (rightResponse turingWinners givenYear))
+    else pack (answerToJSONFormat (wrongResponse turingWinners givenYear))
 
 -- main Scotty
 main :: IO ()
@@ -65,15 +64,12 @@ main = scotty 3000 $ do
     middleware logStdoutDev  -- Log requests for development
 
     get "/turingwomen" $ do
-        text (LT.fromStrict (pack "Será que você consegue adivinhar o ano em que uma mulher venceu o prêmio Turing? Insira no final da URL /ano"))
+        text (pack "Será que você consegue adivinhar o ano em que uma mulher venceu o prêmio Turing? Insira no final da URL /ano")
 
     -- Rota para verificar se uma mulher venceu o prêmio Turing naquele ano
     get "/turingwomen/:year" $ do
-        setHeader (LT.pack "Content-Type") (LT.pack "application/json")
+        setHeader "Content-Type" "application/json"
         givenYear <- param "year" :: ActionM Int 
-        --let responseMessage =
-         --   | not $ yearCheck givenYear = LT.pack (answerToJSONFormat "Insira um ano entre 1966 e 2023")
-          --  | isFemale turingWinners givenYear = LT.pack (answerToJSONFormat (rightResponse turingWinners givenYear))
-         --   | otherwise = LT.pack (answerToJSONFormat (wrongResponse turingWinners givenYear))
-        text getResponseMessage turingWinners givenYear 
+        text $ getResponseMessage turingWinners givenYear 
+
 
