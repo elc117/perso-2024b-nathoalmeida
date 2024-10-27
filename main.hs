@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Web.Scotty
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import System.Random (randomRIO)
+import Control.Monad.IO.Class (liftIO)
 import Data.Text.Lazy as LT (Text, unpack, pack, fromStrict)
 import Text.Printf (printf)
 
@@ -22,8 +24,24 @@ turingWinners = [("Alan Perlis", 1966, "M"), ("Maurice Vincent Wilkes", 1967, "M
     ("Yoshua Bengio; Geoffrey Hinton; Yann LeCun", 2018, "M"),("Edwin Catmull; Pat Hanrahan", 2019, "M"),("Alfred Aho; Jeffrey Ullman", 2020, "M"),("Jack Dongarra", 2021, "M"),
     ("Robert Metcalfe", 2022, "M"),("Avi Wigderson", 2023, "M")]
 
-answerToJSONFormat :: String -> String
-answerToJSONFormat str = printf "{\"%s\"}" str
+-- Dicas 
+turingTips = [ "A primeira mulher a vencer o prêmio Turing faleceu em 2020, aos 88 anos.",
+                "Uma das vencedoras foi rejeitada na Pós-Graduação da Universidade de Princeton, pois não aceitavam mulheres na época.",
+                "A contribuição na otimização de compiladores na IBM e na computação de alto desempenho renderam a ela o prêmio Turing.",
+                "Uma das mulheres divide o prêmio Turing com um colega homem.",
+                "Apenas três mulheres venceram o Prêmio Turing até o dia de hoje.",
+                "A vencedora mais jovem tem, atualmente, 66 anos.",
+                "Uma delas é co-inventora da criptografia probabilística e ferramentas fundamentais para projetos de protocolos criptográficos.",
+                "Uma das vencedoras concebeu e implementou a linguagem CLU, que influenciou linguagens como Java, Python e C#."
+                ]
+
+getRandomTip :: IO String
+getRandomTip = do
+    index <- randomRIO (0, length turingTips - 1)
+    return $ turingTips !! index
+
+twoWinners :: String -> Bool
+twoWinners winner = any (';' ==) winner
 
 yearCheck :: Int -> Bool
 yearCheck year = year >= 1966 && year <= 2023
@@ -44,19 +62,26 @@ rightResponse :: [(String, Int, String)] -> Int -> String
 rightResponse list givenYear = first ++ name ++ winner ++ year
     where first = "Você está certo! "
           name = selectNameByYear list givenYear
-          winner = " venceu o Prêmio Turing em "
-          year = show givenYear
+          winner = if twoWinners $ selectNameByYear list givenYear then " venceram o Prêmio Turing em " else " venceu o Prêmio Turing em "
+          year = show givenYear ++ "."
 
-wrongResponse :: [(String, Int, String)] -> Int -> String
-wrongResponse list givenYear = first ++ name ++ winner ++ year
-            where   first = "Você errou! "
-                    name = selectNameByYear list givenYear
-                    winner = "foi quem venceu o Prêmio Turing em "
-                    year = show givenYear
+wrongResponse :: [(String, Int, String)] -> Int -> IO String
+wrongResponse list givenYear = do
+    randomTip <- getRandomTip  -- Executa a ação IO para obter a dica
+    let first = "Você errou! "
+        name = selectNameByYear list givenYear
+        winner = if twoWinners $ selectNameByYear list givenYear then " venceram o Prêmio Turing em " else " venceu o Prêmio Turing em "
+        year = show givenYear ++ ". /// "
+        dica = " Dica: " ++ randomTip
+    return (first ++ name ++ winner ++ year ++ dica)
 
-getResponseMessage list givenYear = if not $ yearCheck givenYear then pack (answerToJSONFormat "Insira um ano entre 1966 e 2023")
-    else if isFemale turingWinners givenYear then pack (answerToJSONFormat (rightResponse turingWinners givenYear))
-    else pack (answerToJSONFormat (wrongResponse turingWinners givenYear))
+getResponseMessage :: [(String, Int, String)] -> Int -> IO String
+getResponseMessage list givenYear = 
+    if not (yearCheck givenYear) 
+        then return $ "Insira um ano entre 1966 e 2023"
+    else if isFemale turingWinners givenYear 
+        then return $ rightResponse turingWinners givenYear
+    else wrongResponse turingWinners givenYear
 
 -- main Scotty
 main :: IO ()
@@ -69,7 +94,8 @@ main = scotty 3000 $ do
     -- Rota para verificar se uma mulher venceu o prêmio Turing naquele ano
     get "/turingwomen/:year" $ do
         setHeader "Content-Type" "application/json"
-        givenYear <- param "year" :: ActionM Int 
-        text $ getResponseMessage turingWinners givenYear 
+        givenYear <- param "year" :: ActionM Int
+        responseMessage <- liftIO $ getResponseMessage turingWinners givenYear
+        text (pack responseMessage)
 
 
