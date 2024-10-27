@@ -67,7 +67,7 @@ rightResponse list givenYear = first ++ name ++ winner ++ year
 
 wrongResponse :: [(String, Int, String)] -> Int -> IO String
 wrongResponse list givenYear = do
-    randomTip <- getRandomTip  -- Executa a ação IO para obter a dica
+    randomTip <- getRandomTip 
     let first = "Você errou! "
         name = selectNameByYear list givenYear
         winner = if twoWinners $ selectNameByYear list givenYear then " venceram o Prêmio Turing em " else " venceu o Prêmio Turing em "
