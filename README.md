@@ -151,7 +151,7 @@ getResponseMessage list givenYear =
 
 ​	Abaixo, uma demonstração do programa em funcionamento:
 
-![](/home/nathizofoli/Downloads/Gravação de tela de 27-10-2024 20_31_20.gif)
+![https://github.com/elc117/perso-2024b-nathoalmeida/blob/main/gravacaotela.gif](https://github.com/elc117/perso-2024b-nathoalmeida/blob/main/gravacaotela.gif)
 
 ​	Embora seja uma aplicação simples, ela cumpriu com seu objetivo, contribuindo para a construção de conhecimentos em *Web Services* com Haskell, além de divulgar uma fração do trabalho desenvolvido por mulheres na computação. 
 
